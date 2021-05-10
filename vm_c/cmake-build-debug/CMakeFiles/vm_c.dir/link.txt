@@ -1,0 +1,1 @@
+/usr/bin/cc -g CMakeFiles/vm_c.dir/main.c.o CMakeFiles/vm_c.dir/vm.c.o CMakeFiles/vm_c.dir/instructions.c.o -o vm_c 

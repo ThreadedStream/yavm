@@ -1,0 +1,18 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/glasser/toys/yavm/vm_c/main.cpp
+vm.h
+/home/glasser/toys/yavm/vm_c/vm.h
+
+/home/glasser/toys/yavm/vm_c/vm.h
+stdio.h
+-
+stdint.h
+-
+
