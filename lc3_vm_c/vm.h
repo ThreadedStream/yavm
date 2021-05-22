@@ -14,7 +14,11 @@ static int running;
 
 enum {
     MR_KBSR = 0xFE00,
-    MR_KBDR = 0xFE02
+    MR_KBDR = 0xFE02,
+    MR_DSR  = 0xfe04,
+    MR_DDR  = 0xfe06,
+    MR_MCR  = 0xfffe,
+    STATUS_BIT = 1 << 15,
 };
 
 enum {

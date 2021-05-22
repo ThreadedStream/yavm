@@ -1,3 +1,0 @@
-/home/glasser/toys/yavm/vm_c/cmake-build-debug/CMakeFiles/edit_cache.dir
-/home/glasser/toys/yavm/vm_c/cmake-build-debug/CMakeFiles/rebuild_cache.dir
-/home/glasser/toys/yavm/vm_c/cmake-build-debug/CMakeFiles/vm_c.dir

@@ -9,7 +9,7 @@ uint16_t signExtend(uint16_t x, int bit_count) {
 }
 
 uint16_t checkKey() {
-    fd_set fdSet;
+    static fd_set fdSet;
     FD_ZERO(&fdSet);
     FD_SET(STDIN_FILENO, &fdSet);
 
@@ -47,14 +47,27 @@ void setup() {
 
 uint16_t memoryRead(uint16_t address) {
     if (address == MR_KBSR) {
-        if (checkKey()) {
-            memory[MR_KBSR] = (1 << 15);
-            memory[MR_KBDR] = getchar();
-        } else {
-            memory[MR_KBSR] = 0;
-        }
+        static fd_set readfds;
+        FD_ZERO(&readfds);
+        FD_SET(STDIN_FILENO, &readfds);
 
+        struct timeval timeout;
+        timeout.tv_sec = 0;
+        timeout.tv_usec = 0;
+
+        return select(1, &readfds, NULL, NULL, &timeout) ? STATUS_BIT : 0;
+    } else if (address == MR_KBDR) {
+        if (memoryRead(MR_KBSR)) {
+            return getchar();
+        } else {
+            return 0;
+        }
+    } else if (address == MR_DSR) {
+        return STATUS_BIT;
+    } else if (address == MR_DDR) {
+        return 0;
     }
+
     return memory[address];
 }
 
@@ -83,7 +96,7 @@ void readImageFile(const char *path) {
 }
 
 void emulate() {
-    const int startAddr =0x3000;
+    const int startAddr = 0x3000;
     registers[R_PC] = startAddr;
     running = 1;
     while (running) {
@@ -248,7 +261,7 @@ void br(uint16_t instruction) {
     uint16_t negBit = (instruction >> 0xB) & 0x1;
     uint16_t zeroBit = (instruction >> 0xA) & 0x1;
     uint16_t posBit = (instruction >> 0x9) & 0x1;
-    uint16_t pcOffset =signExtend(instruction & 0x1FF, 9);
+    uint16_t pcOffset = signExtend(instruction & 0x1FF, 9);
 
     if (negBit | zeroBit | posBit) {
         registers[R_PC] += pcOffset;
