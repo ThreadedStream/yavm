@@ -3,30 +3,36 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <stddef.h>
+
+#define SET_VALUE(destination, offset, type, value) *((type*)(destination + offset)) = value
 
 #define BYTE sizeof(uint8_t)
 // A very, very bad idea, i guess.
 static uint8_t *ptr;
 
-typedef struct {
-    uint16_t bit_depth;
-    uint8_t isLittleEndian;
-    uint8_t isElfOriginalVersion;
-    uint8_t abiOs;
-    uint8_t abiVersion;
-    uint16_t type;
-    uint16_t isa;
-    uint64_t entryPointOffset;
-    uint64_t programHeaderOffset;
-    uint64_t sectionHeaderOffset;
-    uint32_t flags;
-    uint16_t elfHeaderSize;
-    uint16_t entryHeaderSize;
-    uint16_t programHeaderSize;
-    uint16_t programHeaderEntriesNum;
-    uint16_t sectionHeaderSize;
-    uint16_t sectionHeaderEntriesNum;
-    uint16_t sectionHeaderIndex
+// 40 bytes for 32-bit architecture, 44 for 64-bit one (not accounting for a padding)
+typedef struct __attribute__((packed, aligned(8))) {
+    uint8_t isLittleEndian; // 1
+    uint8_t isElfOriginalVersion; // 1
+    uint8_t abiOs; // 1
+    uint8_t abiVersion; // 1
+    uint16_t bit_depth; // 2
+    uint16_t type; // 2
+    uint16_t isa; // 2
+    uint16_t elfHeaderSize; // 2
+    uint16_t entryHeaderSize; // 2
+    uint16_t programHeaderSize; // 2
+    uint16_t programHeaderEntriesNum; // 2
+    uint16_t sectionHeaderSize; // 2
+    uint16_t sectionHeaderEntriesNum; // 2
+    uint16_t sectionHeaderIndex; // 2
+    uint32_t flags; // 4
+    uint64_t entryPointOffset; // 8
+    uint64_t programHeaderOffset; // 8
+    uint64_t sectionHeaderOffset; // 8
+    uint32_t padding64[5]; //20 bytes padding, although compiler would do it anyway
+//   uint32_t padding32[6];
 } ELF_INFO;
 
 
@@ -105,7 +111,7 @@ enum OS_ABI {
     StratusTechnologiesOpenVOS
 };
 
-enum ISA{
+enum ISA {
     NoSpecificInstructionSet = 0x0,
     AT_T_WE_32100 = 0x1,
     SPARC = 0x2,
@@ -170,3 +176,17 @@ enum ISA{
 void readObjectFile(const char *path);
 
 void parseElfHeader();
+
+void
+storeData(void *destination, uint16_t destinationMemberOffset, uint16_t elfOffset32, uint16_t elfOffset64,
+          uint8_t sizeDependent, uint8_t bytes);
+
+__attribute__((always_inline)) uint16_t
+swap16(uint16_t value);
+
+__attribute__((always_inline)) uint32_t
+swap32(uint32_t value);
+
+__attribute__((always_inline)) uint64_t
+swap64(uint64_t value);
+
