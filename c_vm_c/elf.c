@@ -25,6 +25,7 @@
 */
 
 // 0x4000 -> 0x0040, 0x3875 -> 0x7538
+
 FORCE_INLINE uint16_t
 swap16(uint16_t value) {
     return (value >> 8) | (value << 8);
@@ -45,8 +46,8 @@ swap64(uint64_t value) {
 // TODO: Add support for storing data given arbitrary number of bytes
 void storeData(const uint8_t *ptr, void *destination, uint16_t destinationMemberOffset, uint16_t elfOffset32,
                uint16_t elfOffset64,
-                   uint8_t sizeDependent, uint8_t bitDepth) {
-        uint16_t curr_idx;
+               uint8_t sizeDependent, uint8_t bitDepth) {
+    uint16_t curr_idx;
     // Indirectly fetch bit depth. May be a bug-prone endeavour
     // ELF has only two cases if entry is size dependent (32, 64 bit)
     if (sizeDependent) {
@@ -93,6 +94,7 @@ void destroyMemoryBank(MEMORY_BANK *mem_bank) {
     free(mem_bank->sh_ptr);
     mem_bank->sh_ptr = NULL;
 }
+
 
 void readObjectFile(const char *path, MEMORY_BANK *mem_bank) {
     FILE *file = fopen(path, "rb");
@@ -340,7 +342,7 @@ ELF_HEADER parseElfHeader(const MEMORY_BANK *mem_bank) {
     return elf_info;
 }
 
-PROGRAM_HEADER parseProgramHeader(const MEMORY_BANK *mem_bank, uint16_t bit_depth) {
+PROGRAM_HEADER parseProgramHeader(const MEMORY_BANK *mem_bank) {
 
     PROGRAM_HEADER programHeader;
 
@@ -358,103 +360,171 @@ PROGRAM_HEADER parseProgramHeader(const MEMORY_BANK *mem_bank, uint16_t bit_dept
     programHeader.ph_type = swap32(programHeader.ph_type);
 
     // Parsing x86-64 specific flags
-    if (bit_depth == 64) {
-        curr_idx = P_FLAGS_OFFSET_64_BIT;
-        endingPosition = curr_idx + (3 * BYTE);
-        while (curr_idx < endingPosition) {
-            programHeader.ph_flags |= *(ph_ptr + curr_idx);
-            programHeader.ph_flags <<= 8;
-            curr_idx += BYTE;
-        }
-        programHeader.ph_flags |= *(ph_ptr + BYTE);
-        programHeader.ph_flags = swap32(programHeader.ph_flags);
-    }else{
-        programHeader.ph_flags = 0;
+#ifdef __x86_64__
+    curr_idx = P_FLAGS_OFFSET_64_BIT;
+    endingPosition = curr_idx + (3 * BYTE);
+    while (curr_idx < endingPosition) {
+        programHeader.ph_flags |= *(ph_ptr + curr_idx);
+        programHeader.ph_flags <<= 8;
+        curr_idx += BYTE;
     }
+    programHeader.ph_flags |= *(ph_ptr + BYTE);
+    programHeader.ph_flags = swap32(programHeader.ph_flags);
+#else
+    programHeader.ph_flags = 0;
+#endif
 
+#ifdef __x86_64__
     // Parsing file image segment offset
     storeData(ph_ptr, (void *) &programHeader, offsetof(PROGRAM_HEADER, ph_fileImageSegmentOffset64),
               P_FILE_IMAGE_OFFSET_32_BIT,
-              P_FILE_IMAGE_OFFSET_64_BIT, 1, bit_depth);
+              P_FILE_IMAGE_OFFSET_64_BIT, 1, 64);
+#else
+    storeData(ph_ptr, (void *) &programHeader, offsetof(PROGRAM_HEADER, ph_fileImageSegmentOffset64),
+              P_FILE_IMAGE_OFFSET_32_BIT,
+              P_FILE_IMAGE_OFFSET_64_BIT, 1, 32);
+#endif
 
-    if (bit_depth == 64) {
-        programHeader.ph_fileImageSegmentOffset64 = swap64(programHeader.ph_fileImageSegmentOffset64);
-    } else {
-        programHeader.ph_fileImageSegmentOffset64 = swap32(programHeader.ph_fileImageSegmentOffset64);
-    }
+#ifdef __x86_64__
+    programHeader.ph_fileImageSegmentOffset64 = swap64(programHeader.ph_fileImageSegmentOffset64);
+#else
+    programHeader.ph_fileImageSegmentOffset64 = swap32(programHeader.ph_fileImageSegmentOffset64);
+}
+#endif
 
+#ifdef __x86_64__
     // Parsing virtual address of a segment
     storeData(ph_ptr, (void *) &programHeader, offsetof(PROGRAM_HEADER, ph_segmentVAddr64),
               P_VIRTUAL_ADDRESS_OFFSET_32_BIT,
-              P_VIRTUAL_ADDRESS_OFFSET_64_BIT, 1, bit_depth);
+              P_VIRTUAL_ADDRESS_OFFSET_64_BIT, 1, 64);
+#else
+    storeData(ph_ptr, (void *) &programHeader, offsetof(PROGRAM_HEADER, ph_segmentVAddr64),
+              P_VIRTUAL_ADDRESS_OFFSET_32_BIT,
+              P_VIRTUAL_ADDRESS_OFFSET_64_BIT, 1, 32);
+#endif
 
-    if (bit_depth == 64) {
-        programHeader.ph_segmentVAddr64 = swap64(programHeader.ph_segmentVAddr64);
-    } else {
-        programHeader.ph_segmentVAddr64 = swap32(programHeader.ph_segmentVAddr64);
-    }
+#ifdef __x86_64__
+    programHeader.ph_segmentVAddr64 = swap64(programHeader.ph_segmentVAddr64);
+#else
+    programHeader.ph_segmentVAddr64 = swap32(programHeader.ph_segmentVAddr64);
+}
+#endif
 
+#ifdef __x86_64__
     // Parsing physical address of a segment
     storeData(ph_ptr, (void *) &programHeader, offsetof(PROGRAM_HEADER, ph_segmentPhysAddr64),
               P_PHYS_ADDRESS_OFFSET_32_BIT,
-              P_PHYS_ADDRESS_OFFSET_64_BIT, 1, bit_depth);
+              P_PHYS_ADDRESS_OFFSET_64_BIT, 1, 64);
+#else
+    storeData(ph_ptr, (void *) &programHeader, offsetof(PROGRAM_HEADER, ph_segmentPhysAddr64),
+              P_PHYS_ADDRESS_OFFSET_32_BIT,
+              P_PHYS_ADDRESS_OFFSET_64_BIT, 1, 32);
+#endif
 
-    if (bit_depth == 64) {
-        programHeader.ph_segmentPhysAddr64 = swap64(programHeader.ph_segmentPhysAddr64);
-    } else {
-        programHeader.ph_segmentPhysAddr64 = swap32(programHeader.ph_segmentVAddr64);
-    }
 
+#ifdef __x86_64__
+    programHeader.ph_segmentPhysAddr64 = swap64(programHeader.ph_segmentPhysAddr64);
+#else
+    programHeader.ph_segmentPhysAddr64 = swap32(programHeader.ph_segmentVAddr64);
+#endif
+
+#ifdef __x86_64__
     // Parsing segment size in file image
     storeData(ph_ptr, (void *) &programHeader, offsetof(PROGRAM_HEADER, ph_segmentSizeInFileImage64),
               P_FILE_SIZE_OFFSET_32_BIT,
-              P_FILE_SIZE_OFFSET_64_BIT, 1, bit_depth);
+              P_FILE_SIZE_OFFSET_64_BIT, 1, 64);
+#else
+    storeData(ph_ptr, (void *) &programHeader, offsetof(PROGRAM_HEADER, ph_segmentSizeInFileImage32),
+              P_FILE_SIZE_OFFSET_32_BIT,
+              P_FILE_SIZE_OFFSET_64_BIT, 1, 32);
+#endif
 
-    if (bit_depth == 64) {
-        programHeader.ph_segmentSizeInFileImage64 = swap64(programHeader.ph_segmentSizeInFileImage64);
-    } else {
-        programHeader.ph_segmentSizeInFileImage64 = swap32(programHeader.ph_segmentSizeInFileImage64);
-    }
+#ifdef __x86_64__
+    programHeader.ph_segmentSizeInFileImage64 = swap64(programHeader.ph_segmentSizeInFileImage64);
+#else
+    programHeader.ph_segmentSizeInFileImage64 = swap32(programHeader.ph_segmentSizeInFileImage32);
+#endif
 
+#ifdef __x86_64__
     // Parsing memory size in file image
     storeData(ph_ptr, (void *) &programHeader, offsetof(PROGRAM_HEADER, ph_segmentSizeInMemory64),
               P_MEMORY_SIZE_OFFSET_32_BIT,
-              P_MEMORY_SIZE_OFFSET_64_BIT, 1, bit_depth);
+              P_MEMORY_SIZE_OFFSET_64_BIT, 1, 64);
+#else
+    storeData(ph_ptr, (void *) &programHeader, offsetof(PROGRAM_HEADER, ph_segmentSizeInMemory64),
+              P_MEMORY_SIZE_OFFSET_32_BIT,
+              P_MEMORY_SIZE_OFFSET_64_BIT, 1, 32);
+#endif
 
-    if (bit_depth == 64) {
-        programHeader.ph_segmentSizeInMemory64 = swap64(programHeader.ph_segmentSizeInMemory64);
-    } else {
-        programHeader.ph_segmentSizeInMemory64 = swap32(programHeader.ph_segmentSizeInMemory64);
-    }
+#ifdef __x86_64__
+    programHeader.ph_segmentSizeInMemory64 = swap64(programHeader.ph_segmentSizeInMemory64);
+#else
+    programHeader.ph_segmentSizeInMemory64 = swap32(programHeader.ph_segmentSizeInMemory64);
+#endif
 
+#ifdef __x86_64__
+    programHeader.ph_segmentFlags = 0;
+#else
     // Parsing x86 specific segment flags
-    if (bit_depth == 32) {
-        curr_idx = P_FLAGS_OFFSET_32_BIT;
-        endingPosition = curr_idx + (3 * BYTE);
-        while (curr_idx < endingPosition) {
-            programHeader.ph_segmentFlags |= *(ph_ptr + curr_idx);
-            programHeader.ph_segmentFlags <<= 8;
-            curr_idx += BYTE;
-        }
-        programHeader.ph_segmentFlags |= *(ph_ptr + BYTE);
-        programHeader.ph_segmentFlags = swap32(programHeader.ph_segmentFlags);
-    }else{
-        programHeader.ph_segmentFlags = 0;
+    curr_idx = P_FLAGS_OFFSET_32_BIT;
+    endingPosition = curr_idx + (3 * BYTE);
+    while (curr_idx < endingPosition) {
+        programHeader.ph_segmentFlags |= *(ph_ptr + curr_idx);
+        programHeader.ph_segmentFlags <<= 8;
+        curr_idx += BYTE;
     }
+    programHeader.ph_segmentFlags |= *(ph_ptr + BYTE);
+    programHeader.ph_segmentFlags = swap32(programHeader.ph_segmentFlags);
+#endif
 
+#ifdef __x86_64__
     // Parsing alignment
     storeData(ph_ptr, (void *) &programHeader, offsetof(PROGRAM_HEADER, ph_align64),
               P_ALIGN_OFFSET_32_BIT,
-              P_ALIGN_OFFSET_64_BIT, 1, bit_depth);
+              P_ALIGN_OFFSET_64_BIT, 1, 64);
+#else
+    storeData(ph_ptr, (void *) &programHeader, offsetof(PROGRAM_HEADER, ph_align64),
+              P_ALIGN_OFFSET_32_BIT,
+              P_ALIGN_OFFSET_64_BIT, 1, 32);
+#endif
 
-    if (bit_depth == 64) {
+#ifdef __x86_64__
         programHeader.ph_align64 = swap64(programHeader.ph_align64);
-    } else {
+#else
         programHeader.ph_align64 = swap32(programHeader.ph_align64);
-    }
+#endif
 
     return programHeader;
 }
+
+SECTION_HEADER parseSectionHeader(const MEMORY_BANK *mem_bank, uint16_t bit_depth) {
+    SECTION_HEADER sectionHeader;
+
+    uint8_t *sh_ptr = mem_bank->sh_ptr;
+
+    // Parsing p_type
+    uint16_t curr_idx = SH_NAME_OFFSET;
+    uint16_t endingPosition = curr_idx + (3 * BYTE);
+    while (curr_idx < endingPosition) {
+        sectionHeader.sh_offsetToNameString |= *(sh_ptr + curr_idx);
+        sectionHeader.sh_offsetToNameString <<= 8;
+        curr_idx += BYTE;
+    }
+    sectionHeader.sh_offsetToNameString |= *(sh_ptr + BYTE);
+    sectionHeader.sh_offsetToNameString = swap32(sectionHeader.sh_offsetToNameString);
+
+    curr_idx = SH_TYPE_OFFSET;
+    endingPosition = curr_idx + (3 * BYTE);
+    while (curr_idx < endingPosition) {
+        sectionHeader.sh_type |= *(sh_ptr + curr_idx);
+        sectionHeader.sh_type <<= 8;
+        curr_idx += BYTE;
+    }
+    sectionHeader.sh_type |= *(sh_ptr + BYTE);
+    sectionHeader.sh_type = swap32(sectionHeader.sh_type);
+
+}
+
 
 const char *stringifyAbiOs(uint16_t abiOs) {
     switch (abiOs) {
@@ -653,6 +723,21 @@ const char *stringifyProgramHeaderType(uint32_t type) {
     }
 }
 
+const char *stringifySectionHeaderType(uint32_t type) {
+    switch (type) {
+        case SHT_NULL:
+            return "Section header table entry unused";
+        case SHT_PROGBITS:
+            return "Program data";
+        case SHT_SYMTAB:
+            return "Symbol table";
+        case SHT_STRTAB:
+            return "String table";
+        default:
+            return "Undetermined";
+    }
+}
+
 
 void printElfData(const ELF_HEADER *elf_info) {
     printf("ELF header table\n");
@@ -688,3 +773,13 @@ void printProgramHeaderData(const PROGRAM_HEADER *programHeader) {
     printf("Segment-dependent flags(32 bit): 0x%x\n", programHeader->ph_segmentFlags);
     printf("Alignment: 0x%" PRIx64 "\n", programHeader->ph_align64);
 }
+
+
+void printSectionHeaderData(const SECTION_HEADER *sectionHeader) {
+    printf("\n\n");
+    printf("Section header information\n");
+    printf("Offset to header's name: %d", sectionHeader->sh_offsetToNameString);
+    printf("Header's type: %d", sectionHeader->sh_type);
+}
+
+

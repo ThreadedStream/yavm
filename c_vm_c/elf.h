@@ -12,6 +12,8 @@
 
 #define BYTE sizeof(uint8_t)
 
+// TODO: add support for x86 architecture
+
 typedef struct {
     uint8_t *elf_ptr;
     uint8_t *ph_ptr;
@@ -55,8 +57,9 @@ typedef struct __attribute__((packed, aligned(8))){
     uint8_t padding[4];
 } PROGRAM_HEADER;
 
+
 typedef struct {
-    uint32_t sh_sectionHeaderName;
+    uint32_t sh_offsetToNameString;
     uint32_t sh_type;
     union {
         uint32_t sh_flags32;
@@ -144,6 +147,29 @@ enum {
     P_ALIGN_OFFSET_64_BIT = 0x30,
     P_END_OF_PROGRAM_HEADER_32 = 0x20,
     P_END_OF_PROGRAM_HEADER_64 = 0x38
+};
+
+// Section header offsets
+enum{
+    SH_NAME_OFFSET = 0x0,
+    SH_TYPE_OFFSET = 0x4,
+    SH_FLAGS_OFFSET = 0x8,
+    SH_ADDR_OFFSET_32 = 0xC,
+    SH_ADDR_OFFSET_64 = 0x10,
+    SH_OFFSET_OFFSET_32 = 0x10,
+    SH_OFFSET_OFFSET_64 = 0x18,
+    SH_SIZE_OFFSET_32 = 0x14,
+    SH_SIZE_OFFSET_64 = 0x20,
+    SH_LINK_OFFSET_32 = 0x18,
+    SH_LINK_OFFSET_64 = 0x28,
+    SH_INFO_OFFSET_32 = 0x1C,
+    SH_INFO_OFFSET_64 = 0x2C,
+    SH_ADDRALIGN_OFFSET_32 = 0x20,
+    SH_ADDRALIGN_OFFSET_64 = 030,
+    SH_ENTSIZE_OFFSET_32 = 0x24,
+    SH_ENTSIZE_OFFSET_64 = 0x38,
+    END_OF_SECTION_HEADER_OFFSET_32 = 0x28,
+    END_OF_SECTION_HEADER_OFFSET_64 = 0x40
 };
 
 // Object file types
@@ -259,6 +285,47 @@ enum {
     PT_HIPROC = 0x7FFFFFFF
 };
 
+// Section header type
+enum{
+    SHT_NULL = 0x0,
+    SHT_PROGBITS = 0x1,
+    SHT_SYMTAB = 0x2,
+    SHT_STRTAB = 0x3,
+    SHT_RELA = 0x4,
+    SHT_HASH = 0x5,
+    SHT_DYNAMIC = 0x6,
+    SHT_NOTE = 0x7,
+    SHT_NOBITS = 0x8,
+    SHT_REL = 0x9,
+    SHT_SHLIB = 0x0A,
+    SHT_DYNSYM = 0x0B,
+    SHT_INIT_ARRAY = 0x0E,
+    SHT_FINI_ARRAY = 0x0F,
+    SHT_PREINIT_ARRAY = 0x10,
+    SHT_GROUP = 0x11,
+    SHT_SYMTAB_SHNDX = 0x12,
+    SHT_NUM = 0x13,
+    SHT_LOOS = 0x60000000 // OS-specific
+};
+
+// Section attributes
+enum{
+    SHF_WRITE = 0x2 >> 1, // 1
+    SHF_ALLOC = 0x2, // 2
+    SHF_EXECINSTR = 0x2 << 1, // 4
+    SHF_MERGE = 0x2 << 3, // 16
+    SHF_STRINGS = 0x2 << 4, // 32
+    SHF_INFO_LINK = 0x2 << 5, // 64
+    SHF_LINK_ORDER = 0x2 << 6, // 128
+    SHF_OS_NONCONFORMING = 0x2 << 7, // 256
+    SHF_GROUP = 0x2 << 8, // 512
+    SHF_TLS = 0x2 << 9, // 1024
+    SHF_MASKOS = 0x0ff00000, // OS-specific
+    SHF_MASKPROC = 0xf0000000, // Processor-specific
+    SHF_ORDERED = 0x4000000, // Special ordering requirement (Solaris)
+    SHF_EXCLUDE = 0x8000000 // Section is excluded unless referenced or allocated (Solaris)
+};
+
 void readObjectFile(const char *path, MEMORY_BANK *mem_bank);
 
 MEMORY_BANK initMemoryBank();
@@ -267,7 +334,7 @@ void destroyMemoryBank(MEMORY_BANK *mem_bank);
 
 ELF_HEADER parseElfHeader(const MEMORY_BANK *mem_bank);
 
-PROGRAM_HEADER parseProgramHeader(const MEMORY_BANK *mem_bank, uint16_t bit_depth);
+PROGRAM_HEADER parseProgramHeader(const MEMORY_BANK *mem_bank);
 
 SECTION_HEADER parseSectionHeader(const MEMORY_BANK *mem_bank, uint16_t bit_depth);
 
@@ -283,6 +350,8 @@ const char *stringifyIsa(uint16_t isa);
 const char *stringifyElfType(uint16_t type);
 
 const char *stringifyProgramHeaderType(uint32_t type);
+
+const char *stringifySectionHeaderType(uint32_t type);
 
 void
 printElfData(const ELF_HEADER *elf_info);
